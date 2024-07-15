@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Kanban - ariaNotify Polyfill Examples</title>
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="move-items.css" />
+  </head>
+  <body>
+    <main>
+      <h1>ariaNotify Polyfill Examples - Kanban</h1>
+      <button class="move-items" aria-pressed="false">Move items</button>
+      <ol class="columns" role="list">
+        <li class="column">
+          <h2>To Do</h2>
+          <ol class="items" role="list">
+            <li class="item">Implement drag and drop</li>
+            <li class="item">Add drag and drop announcements</li>
+            <li class="item">Publish to GitHub pages?</li>
+          </ol>
+        </li>
+        <li class="column">
+          <h2>Doing</h2>
+          <ol class="items" role="list">
+            <li class="item">Figure out CSS grid</li>
+          </ol>
+        </li>
+        <li class="column">
+          <h2>Done</h2>
+          <ol class="items" role="list">
+            <li class="item">Create a repo</li>
+            <li class="item">Create "examples" directory</li>
+          </ol>
+        </li>
+      </div>
+    </main>
+    <script src="index.js"></script>
+  </body>
+</html>
