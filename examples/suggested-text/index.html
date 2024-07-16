@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Suggested Text - ariaNotify Polyfill Examples</title>
+    <link rel="stylesheet" href="index.css" />
+    <style>
+      body { padding: 2rem; }
+      label {
+        display: block;
+        font-size: 1rem;
+        font-weight: bold;
+      }
+      fieldset {
+        position: relative;
+        width: 600px;
+        min-height: 100px;
+        padding: 0.2rem;
+        border: 0;
+      }
+      textarea {
+        font-family: sans-serif;
+        color: #1f2328;
+        font-size: 1rem;
+        padding: 0.2rem;
+        border: 1px solid #d0d7de;
+        border-radius: 3px;
+        width: 600px;
+        min-height: 100px;
+        margin: 0;
+        vertical-align: text-bottom;
+        cursor: text;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        margin: 0;
+        background: transparent;
+        resize: vertical;
+        box-shadow: inset 0px 1px 0px 0px #1f23280a
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <label for="t">Add a comment</label>
+      <fieldset>
+        <text-suggestions>
+          <template shadowrootmode="open">
+            <style>
+              #s {
+                position: absolute !important;
+                top: 0 !important;
+                resize: none !important;
+                z-index: -1 !important;
+                margin-top: 3px !important;
+                border-color: transparent !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+                color: GrayText !important;
+              }
+              #hint {
+                padding: 0.25rem;
+              }
+              kbd {
+                display: inline-block;
+                padding: 0.25rem;
+                font: 11px sans-serif;
+                line-height: 10px;
+                color: #1f2328;
+                vertical-align: middle;
+                background-color: #f6f8fa;
+                border: solid 1px #afb8c133;
+                border-radius: 6px;
+                box-shadow: inset 0 -1px 0 #afb8c133;
+              }
+            </style>
+            <slot></slot>
+            <textarea tabindex="-1" role="presentation" id="s"></textarea>
+            <div id="hint" hidden><kbd>→</kbd> to complete...</div>
+          </template>
+
+          <textarea id="t" placeholder="Add your comment here..."></textarea>
+        </text-suggestions>
+      </fieldset>
+    </main>
+    <script type="module">
+      class PrefixTrie {
+        constructor(parent, value) {
+          this.parent = parent || null
+          this.children = {}
+          this.value = value
+        }
+        get leaf() {
+          return Object.keys(this.children).length == 0
+        }
+        get word() {
+          let letters = []
+          let node = this
+          while(node.parent) {
+            letters.push(node.value)
+            node = node.parent
+          }
+          return letters.reverse().join('')
+        }
+        get(edge) {
+          return this.children[edge] || null
+        }
+        insert(edges) {
+          let currentNode = this
+          let i = 0
+          for (; i < edges.length; i += 1) {
+            const edge = edges[i]
+            let nextNode = currentNode.get(edge)
+            if (i === edges.length - 1) {
+              if (!nextNode?.leaf) {
+                currentNode.delete(nextNode)
+                nextNode = null
+              }
+              if (!nextNode) {
+                nextNode = new PrefixTrie(currentNode, edge)
+                currentNode.children[edge] = nextNode
+              }
+              return nextNode
+            } else {
+              if (nextNode?.leaf) nextNode = null
+              if (!nextNode) {
+                nextNode = new PrefixTrie(currentNode, edge)
+                currentNode.children[edge] = nextNode
+              }
+            }
+            currentNode = nextNode
+          }
+          currentNode.value = edges.slice(i)
+          return currentNode
+        }
+        delete(node) {
+          for (const edge in this.children) {
+            const currentNode = this.children[edge]
+            if (currentNode === node) {
+              const success = delete this.children[edge]
+              if (Object.keys(this.children).length === 0 && this.parent) {
+                this.parent.delete(this)
+              }
+              return success
+            }
+          }
+          return false
+        }
+        find(edges, i = 0) {
+          if (i >= edges.length) {
+            return this.leaf ? this : this.children[Object.keys(this.children)[0]].find(edges, i)
+          }
+          let node = this.get(edges[i])
+          if (!node) return null;
+          if (node.leaf) {
+            return node
+          } else {
+            return node.find(edges, i + 1)
+          }
+        }
+      }
+
+      const trieRoot = new PrefixTrie();
+      globalThis.trieRoot = trieRoot;
+
+      customElements.define('text-suggestions', class extends HTMLElement {
+        get forElement() {
+          return this.querySelector('textarea')
+        }
+
+        get #suggestElement() {
+          return this.shadowRoot.getElementById('s')
+        }
+
+        get #hint() {
+          return this.shadowRoot.getElementById('hint')
+        }
+
+        #abortController = new AbortController()
+        #timer = 0
+
+        connectedCallback() {
+          this.#abortController?.abort()
+          const {signal} = (this.#abortController = new AbortController())
+          this.forElement.addEventListener('input', this, {signal})
+          this.forElement.addEventListener('focusout', this, {signal})
+          this.forElement.addEventListener('keyup', this, {signal})
+          this.#styleElement()
+        }
+
+        handleEvent(e) {
+          if (this.forElement.selectionStart != this.forElement.value.length || event.type == 'focusout') {
+            this.clearSuggestion()
+          } else if (event.type == 'keyup' && event.key == 'ArrowRight') {
+            this.commitSuggestion()
+          } else if (event.type == 'input' || event.type == 'keyup') {
+            this.clearSuggestion()
+            clearTimeout(this.#timer)
+            this.#timer = setTimeout(() => {
+              let word = this.predictNextWord();
+              this.makeSuggestion(word)
+            }, 250)
+          }
+        }
+
+        clearSuggestion() {
+          this.#suggestElement.value = ''
+          this.#hint.hidden = true
+        }
+
+        makeSuggestion(text) {
+          if (this.forElement.value && text) {
+            this.#suggestElement.value = `${this.forElement.value}${text}`
+            this.#hint.hidden = false
+          } else {
+            this.clearSuggestion()
+          }
+        }
+
+        commitSuggestion() {
+          if (this.#suggestElement.value) {
+            this.forElement.value = this.#suggestElement.value
+            this.forElement.setSelectionRange(this.forElement.value.length, this.forElement.value.length)
+          }
+        }
+
+        #styleElement() {
+          this.shadowRoot
+          let styles = getComputedStyle(this.forElement)
+          let suggestion = this.#suggestElement
+          for(let i = 0; i < styles.length; i+=1) {
+            const name = styles[i]
+            suggestion.style[name] = styles[name]
+          }
+        }
+
+        disonnectedCallback() {
+          this.#abortController?.abort()
+        }
+
+        predictNextWord() {
+          let lastWord = this.forElement.value.split(' ').at(-1)
+          if (!lastWord) return
+          let guessed = trieRoot.find(lastWord)?.word
+          return guessed ? guessed.slice(lastWord.length) + ' ' : ''
+        }
+
+      })
+
+      trieRoot.insert('acceptable')
+      trieRoot.insert('accidentally')
+      trieRoot.insert('accommodate')
+      trieRoot.insert('acquire')
+      trieRoot.insert('acquit')
+      trieRoot.insert('amateur')
+      trieRoot.insert('apparent')
+      trieRoot.insert('argument')
+      trieRoot.insert('atheist')
+      trieRoot.insert('believe')
+      trieRoot.insert('bellwether')
+      trieRoot.insert('calendar')
+      trieRoot.insert('category')
+      trieRoot.insert('cemetery')
+      trieRoot.insert('changeable')
+      trieRoot.insert('collectible')
+      trieRoot.insert('column')
+      trieRoot.insert('committed')
+      trieRoot.insert('conscience')
+      trieRoot.insert('conscientious')
+      trieRoot.insert('conscious')
+      trieRoot.insert('consensus')
+      trieRoot.insert('daiquiri')
+      trieRoot.insert('definitely')
+      trieRoot.insert('discipline')
+      trieRoot.insert('drunkenness')
+      trieRoot.insert('dumbbell')
+      trieRoot.insert('embarrass')
+      trieRoot.insert('equipment')
+      trieRoot.insert('exhilarate')
+      trieRoot.insert('exceed')
+      trieRoot.insert('existence')
+      trieRoot.insert('experience')
+      trieRoot.insert('fiery')
+      trieRoot.insert('foreign')
+      trieRoot.insert('gauge')
+      trieRoot.insert('grateful')
+      trieRoot.insert('guarantee')
+      trieRoot.insert('harass')
+      trieRoot.insert('height')
+      trieRoot.insert('hierarchy')
+      trieRoot.insert('humorous')
+      trieRoot.insert('ignorance')
+      trieRoot.insert('immediate')
+      trieRoot.insert('independent')
+      trieRoot.insert('indispensable')
+      trieRoot.insert('inoculate')
+      trieRoot.insert('intelligence')
+      trieRoot.insert('jewelry')
+      trieRoot.insert('judgment')
+      trieRoot.insert('kernel')
+      trieRoot.insert('leisure')
+      trieRoot.insert('liaison')
+      trieRoot.insert('library')
+      trieRoot.insert('license')
+      trieRoot.insert('maintenance')
+      trieRoot.insert('maneuver')
+      trieRoot.insert('medieval')
+      trieRoot.insert('memento')
+      trieRoot.insert('millennium')
+      trieRoot.insert('miniature')
+      trieRoot.insert('minuscule')
+      trieRoot.insert('mischievous')
+      trieRoot.insert('misspell')
+      trieRoot.insert('neighbor')
+      trieRoot.insert('noticeable')
+      trieRoot.insert('occasionally')
+      trieRoot.insert('occurrence')
+      trieRoot.insert('pastime')
+      trieRoot.insert('perseverance')
+      trieRoot.insert('personnel')
+      trieRoot.insert('playwright')
+      trieRoot.insert('possession')
+      trieRoot.insert('precede')
+      trieRoot.insert('principal')
+      trieRoot.insert('privilege')
+      trieRoot.insert('pronunciation')
+      trieRoot.insert('publicly')
+      trieRoot.insert('questionnaire')
+      trieRoot.insert('receipt')
+      trieRoot.insert('recommend')
+      trieRoot.insert('referred')
+      trieRoot.insert('reference')
+      trieRoot.insert('relevant')
+      trieRoot.insert('rhyme')
+      trieRoot.insert('rhythm')
+      trieRoot.insert('schedule')
+      trieRoot.insert('separate')
+      trieRoot.insert('sergeant')
+      trieRoot.insert('supersede')
+      trieRoot.insert('threshold')
+      trieRoot.insert('twelfth')
+      trieRoot.insert('tyranny')
+      trieRoot.insert('until')
+      trieRoot.insert('vacuum')
+      trieRoot.insert('weather')
+      trieRoot.insert('whether')
+      trieRoot.insert('weird')
+    </script>
+  </body>
+</html>
