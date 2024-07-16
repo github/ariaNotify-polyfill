@@ -34,5 +34,10 @@
       </div>
     </main>
     <script src="index.js"></script>
+    <script type="module">
+      document.querySelector(".columns").addEventListener('MoveCard', (event) => {
+        event.currentTarget.ariaNotify(`${event.user} moved ${event.target.textContent} to ${event.target.closest('.column').querySelector('h2').textContent}`)
+      })
+    </script>
   </body>
 </html>

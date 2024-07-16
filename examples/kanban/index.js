@@ -1,6 +1,13 @@
-// @ts-check
-
 let intervalId;
+
+const users = ["John", "Jane", "Alice", "Bob", "Charlie", "David", "Eve"];
+
+class MoveEvent extends Event {
+  constructor(type, { user }) {
+    super(type, { bubbles: true });
+    this.user = user;
+  }
+}
 
 const items = Array.from(document.querySelectorAll(".item"));
 items.forEach((item, index) => {
@@ -11,21 +18,27 @@ items.forEach((item, index) => {
 const columns = Array.from(document.querySelectorAll(".column"));
 
 async function moveItem() {
+  const user = users[Math.floor(Math.random() * users.length)];
   const item = items[Math.floor(Math.random() * items.length)];
-  item.style.viewTransitionName = "item-active";
-
   const destinationColumn = columns[Math.floor(Math.random() * columns.length)];
 
-  if (!document.startViewTransition) {
-    destinationColumn.querySelector(".items")?.appendChild(item);
+  if (item.closest(".column") === destinationColumn) {
+    moveItem();
     return;
   }
-  const transition = document.startViewTransition(() =>
-    destinationColumn.querySelector(".items")?.appendChild(item)
-  );
 
-  await transition.finished;
-  item.style.viewTransitionName = "none";
+  if (document.startViewTransition) {
+    item.style.viewTransitionName = "item-active";
+    const transition = document.startViewTransition(() =>
+      destinationColumn.querySelector(".items")?.appendChild(item)
+    );
+    await transition.finished;
+    item.style.viewTransitionName = "none";
+  } else {
+    destinationColumn.querySelector(".items")?.appendChild(item);
+  }
+
+  item.dispatchEvent(new MoveEvent("MoveCard", { user }));
 }
 
 document.querySelector(".move-items")?.addEventListener("click", (event) => {
