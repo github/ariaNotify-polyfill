@@ -83,6 +83,40 @@
       </fieldset>
     </main>
     <script type="module">
+      let timer
+      document
+        .querySelector("text-suggestions")
+        .addEventListener("MakeSuggestion", (event) => {
+          event.currentTarget.ariaNotify(`Suggestion: ${event.suggestion}`, {
+            priority: "important",
+            interrupt: "all",
+          })
+          clearTimeout(timer)
+          timer = setTimeout(() => {
+            event.currentTarget.ariaNotify(
+              "Press right arrow to commit suggestion",
+              {
+                notificationId: "application-keyboard-hint",
+                priority: "low",
+                interrupt: "all",
+              }
+            )
+          }, 1000)
+          event.currentTarget.addEventListener(
+            "keyup",
+            () => clearTimeout(timer),
+            { once: true, capture: true }
+          )
+        })
+    </script>
+    <script type="module">
+      class SuggestionEvent extends Event {
+        constructor(type, { suggestion } = {}) {
+          super(type, { bubbles: true })
+          this.suggestion = suggestion
+        }
+      }
+
       class PrefixTrie {
         constructor(parent, value) {
           this.parent = parent || null
@@ -209,6 +243,9 @@
 
         makeSuggestion(text) {
           if (this.forElement.value && text) {
+            this.#suggestElement.dispatchEvent(
+              new SuggestionEvent("MakeSuggestion", { suggestion: text })
+            )
             this.#suggestElement.value = `${this.forElement.value}${text}`
             this.#hint.hidden = false
           } else {
