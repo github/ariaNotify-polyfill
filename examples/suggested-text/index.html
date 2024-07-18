@@ -177,6 +177,10 @@
           makeSuggestion(word) {
             if (this.forElement.value && word) {
               const suggestion = word.slice(this.forElement.value.split(' ').at(-1).length);
+              if (!suggestion) {
+                this.clearSuggestion();
+                return;
+              }
               this.dispatchEvent(
                 new SuggestionEvent("MakeSuggestion", { suggestion, word }),
               );
