@@ -2,42 +2,294 @@
 <html lang="en">
   <head>
     <title>Kanban - ariaNotify Polyfill Examples</title>
-    <link rel="stylesheet" href="index.css" />
-    <link rel="stylesheet" href="move-items.css" />
   </head>
   <body>
     <main>
       <h1>ariaNotify Polyfill Examples - Kanban</h1>
-      <button class="move-items" aria-pressed="false">Move items</button>
-      <ol class="columns" role="list">
-        <li class="column">
-          <h2>To Do</h2>
-          <ol class="items" role="list">
-            <li class="item">Implement drag and drop</li>
-            <li class="item">Add drag and drop announcements</li>
-            <li class="item">Publish to GitHub pages?</li>
-          </ol>
-        </li>
-        <li class="column">
-          <h2>Doing</h2>
-          <ol class="items" role="list">
-            <li class="item">Figure out CSS grid</li>
-          </ol>
-        </li>
-        <li class="column">
-          <h2>Done</h2>
-          <ol class="items" role="list">
-            <li class="item">Create a repo</li>
-            <li class="item">Create "examples" directory</li>
-          </ol>
-        </li>
-      </div>
+      <auto-mover>
+        <template shadowrootmode="open">
+          <toggle-button>
+            <template shadowrootmode="open">
+              <style>
+                button {
+                  background-color: white;
+                  font-size: 1rem;
+                  border: 1px solid #aaa;
+                  padding: 0.125rem 3rem;
+                  position: relative;
+                  width: fit-content;
+                }
+
+                button::after {
+                  color: white;
+                  border: 1px solid #aaa;
+                  transition: left 0.125s;
+                  display: block;
+                  position: absolute;
+                  top: -1px;
+                }
+                @media (prefers-reduced-motion) {
+                  button::after {
+                    transition: none;
+                  }
+                }
+
+                button[aria-pressed="true"]::after {
+                  background-color: green;
+                  border-left: 0;
+                  content: "On";
+                  padding: 0.125rem 0.25rem 0.125rem 0.375rem;
+                  left: calc(100% - 2rem + 1px);
+                }
+
+                button[aria-pressed="false"]::after {
+                  background-color: black;
+                  border-right: 0;
+                  content: "Off";
+                  padding: 0.125rem 0.375rem 0.125rem 0.25rem;
+                  left: -1px;
+                }
+              </style>
+              <button aria-pressed="false"><slot></slot></button>
+            </template>
+            Move items
+          </toggle-button>
+          <kanban-board>
+            <template shadowrootmode="open">
+              <style>
+                ol {
+                  list-style: none;
+                  padding: 0;
+                }
+
+                @media (prefers-reduced-motion) {
+                  ::view-transition-group(*),
+                  ::view-transition-old(*),
+                  ::view-transition-new(*) {
+                    animation: none !important;
+                  }
+                }
+
+                .columns {
+                  display: grid;
+                  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+                  grid-auto-rows: 1fr;
+                  gap: 1rem;
+                  flex: 1;
+                  max-width: 100%;
+                }
+
+                .column {
+                  background: #eee;
+                  border: 1px solid #aaa;
+                  padding: 0.25rem 1rem;
+                }
+
+                .items {
+                  display: grid;
+                  grid-template-columns: 1fr;
+                  gap: 0.5rem;
+                }
+
+                .item {
+                  background: white;
+                  border: 1px solid #aaa;
+                  padding: 1rem;
+                  height: 4rem;
+                }
+
+                .item-1 {
+                  background: lightblue;
+                }
+                .item-2 {
+                  background: lightgreen;
+                }
+                .item-3 {
+                  background: lightcoral;
+                }
+                .item-4 {
+                  background: lightgoldenrodyellow;
+                }
+                .item-5 {
+                  background: lightpink;
+                }
+                .item-6 {
+                  background: lightseagreen;
+                }
+              </style>
+              <ol class="columns" role="list">
+                <li class="column">
+                  <h2>To Do</h2>
+                  <ol class="items" role="list">
+                    <li class="item">Implement drag and drop</li>
+                    <li class="item">Add drag and drop announcements</li>
+                    <li class="item">Publish to GitHub pages?</li>
+                  </ol>
+                </li>
+                <li class="column">
+                  <h2>Doing</h2>
+                  <ol class="items" role="list">
+                    <li class="item">Figure out CSS grid</li>
+                  </ol>
+                </li>
+                <li class="column">
+                  <h2>Done</h2>
+                  <ol class="items" role="list">
+                    <li class="item">Create a repo</li>
+                    <li class="item">Create "examples" directory</li>
+                  </ol>
+                </li>
+              </ol>
+            </template>
+          </kanban-board>
+        </template>
+      </auto-mover>
     </main>
-    <script src="index.js"></script>
     <script type="module">
-      document.querySelector(".columns").addEventListener('MoveCard', (event) => {
-        event.currentTarget.ariaNotify(`${event.user} moved ${event.target.textContent} to ${event.target.closest('.column').querySelector('h2').textContent}`)
-      })
+      class MoveEvent extends Event {
+        constructor(type, { user }) {
+          super(type, { bubbles: true, composed: true });
+          this.user = user;
+        }
+      }
+
+      const users = ["John", "Jane", "Alice", "Bob", "Charlie", "David", "Eve"];
+
+      function getRandomThing(array) {
+        return array[Math.floor(Math.random() * array.length)];
+      }
+
+      customElements.define(
+        "kanban-board",
+        class extends HTMLElement {
+          get columns() {
+            return Array.from(this.shadowRoot.querySelectorAll(".column"));
+          }
+
+          get items() {
+            return Array.from(this.shadowRoot.querySelectorAll(".item"));
+          }
+
+          async moveItem(item, destinationColumn, user) {
+            if (document.startViewTransition) {
+              const transition = document.startViewTransition(() =>
+                destinationColumn.querySelector(".items")?.appendChild(item)
+              );
+              await transition.finished;
+            } else {
+              destinationColumn.querySelector(".items")?.appendChild(item);
+            }
+
+            item.dispatchEvent(new MoveEvent("move-item", { user }));
+          }
+
+          connectedCallback() {
+            this.items.forEach((item, index) => {
+              item.classList.add(`item-${index + 1}`);
+              item.style.viewTransitionName = `item-${index + 1}`;
+            });
+          }
+        }
+      );
+
+      customElements.define(
+        "toggle-button",
+        class extends HTMLElement {
+          get button() {
+            return this.shadowRoot.querySelector("button");
+          }
+
+          get pressed() {
+            return this.button.getAttribute("aria-pressed") === "true";
+          }
+
+          set pressed(value) {
+            this.button.setAttribute("aria-pressed", String(value));
+          }
+
+          connectedCallback() {
+            this.role = "none";
+            this.addEventListener("click", this);
+          }
+
+          handleEvent(event) {
+            if (event.type === "click") {
+              this.pressed = !this.pressed;
+              let options = {
+                oldState: "on",
+                newState: "off",
+                bubbles: true,
+                composed: true,
+              };
+              if (this.pressed) {
+                options = { ...options, oldState: "off", newState: "on" };
+              }
+              this.dispatchEvent(new ToggleEvent("toggle", options));
+            }
+          }
+        }
+      );
+
+      customElements.define(
+        "auto-mover",
+        class extends HTMLElement {
+          #timeoutId;
+
+          get #toggle() {
+            return this.shadowRoot.querySelector("toggle-button");
+          }
+
+          get #kanban() {
+            return this.shadowRoot.querySelector("kanban-board");
+          }
+
+          connectedCallback() {
+            this.addEventListener("toggle", this);
+            this.addEventListener("move-item", this);
+          }
+
+          handleEvent(event) {
+            if (event.type === "toggle") {
+              const { newState } = event;
+              if (newState === "on") {
+                this.#moveItem();
+              } else {
+                clearInterval(this.#timeoutId);
+              }
+            } else if (event.type === "move-item" && this.#toggle.pressed) {
+              this.#timeoutId = setTimeout(() => this.#moveItem(), 2000);
+            }
+          }
+
+          #moveItem() {
+            const user = getRandomThing(users);
+            const item = getRandomThing(this.#kanban.items);
+            const destinationColumn = getRandomThing(this.#kanban.columns);
+
+            if (item.closest(".column") === destinationColumn) {
+              this.#moveItem();
+              return;
+            }
+
+            this.#kanban.moveItem(item, destinationColumn, user);
+          }
+        }
+      );
+    </script>
+    <script type="module">
+      /**
+        Our <kanban-board> element emits a `move-item` event
+        which can be listened to to create ariaNotify annoucements:
+      */
+      // document.addEventListener("move-item", (event) => {
+      //   event.target
+      //     .closest("kanban-board")
+      //     .ariaNotify(
+      //       `${event.user} moved ${event.target.textContent} to ${
+      //         event.target.closest(".column").querySelector("h2").textContent
+      //       }`
+      //     );
+      // });
     </script>
   </body>
 </html>
