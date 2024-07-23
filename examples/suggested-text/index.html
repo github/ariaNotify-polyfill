@@ -119,7 +119,7 @@
         Code below implements the mechanics for the suggested text.
       */
       class SuggestionEvent extends Event {
-        constructor(type, { suggestion, word, ...options} = {}) {
+        constructor(type, { suggestion, word, ...options } = {}) {
           super(type, { ...options, bubbles: true });
           this.suggestion = suggestion;
           this.word = word;
@@ -176,13 +176,15 @@
 
           makeSuggestion(word) {
             if (this.forElement.value && word) {
-              const suggestion = word.slice(this.forElement.value.split(' ').at(-1).length);
+              const suggestion = word.slice(
+                this.forElement.value.split(" ").at(-1).length
+              );
               if (!suggestion) {
                 this.clearSuggestion();
                 return;
               }
               this.dispatchEvent(
-                new SuggestionEvent("MakeSuggestion", { suggestion, word }),
+                new SuggestionEvent("MakeSuggestion", { suggestion, word })
               );
               this.#suggestElement.value = `${this.forElement.value}${suggestion}`;
               this.#hint.hidden = false;
@@ -193,15 +195,17 @@
 
           commitSuggestion() {
             if (this.#suggestElement.value) {
-              const word = this.#suggestElement.value.split(' ').at(-1);
-              const suggestion = word.slice(this.forElement.value.split(' ').at(-1).length);
+              const word = this.#suggestElement.value.split(" ").at(-1);
+              const suggestion = word.slice(
+                this.forElement.value.split(" ").at(-1).length
+              );
               this.forElement.value = this.#suggestElement.value;
               this.forElement.setSelectionRange(
                 this.forElement.value.length,
-                this.forElement.value.length,
+                this.forElement.value.length
               );
-              this.forElement.dispatchEvent(new Event('input'));
-              this.forElement.dispatchEvent(new Event('change'));
+              this.forElement.dispatchEvent(new Event("input"));
+              this.forElement.dispatchEvent(new Event("change"));
               this.dispatchEvent(
                 new SuggestionEvent("Committed", { suggestion, word })
               );
@@ -226,7 +230,7 @@
             if (!lastWord) return "";
             return trieRoot.find(lastWord)?.word || "";
           }
-        },
+        }
       );
     </script>
     <script type="module">
@@ -414,5 +418,6 @@
       trieRoot.insert("weird");
       trieRoot.insert("world");
     </script>
+    <script src="../../ariaNotify-polyfill.js"></script>
   </body>
 </html>

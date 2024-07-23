@@ -292,15 +292,15 @@
         which can be listened to to create ariaNotify annoucements:
       */
       document.addEventListener("move-item", (event) => {
-        const message = `${event.user} moved ${event.target.textContent} to ${
-          event.target.closest(".column").querySelector("h2").textContent
-        }`;
-        if ("ariaNotify" in event.target.closest("kanban-board")) {
-          event.target.closest("kanban-board").ariaNotify(message);
-        } else {
-          console.log(message);
-        }
+        event.target
+          .closest("kanban-board")
+          .ariaNotify(
+            `${event.user} moved ${event.target.textContent} to ${
+              event.target.closest(".column").querySelector("h2").textContent
+            }`
+          );
       });
     </script>
+    <script src="../../ariaNotify-polyfill.js"></script>
   </body>
 </html>
