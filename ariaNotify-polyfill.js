@@ -1,4 +1,10 @@
 if (!("ariaNotify" in Element.prototype)) {
+  let uniqueId = Date.now();
+  try {
+    uniqueId = crypto.randomUUID();
+  } catch {}
+  const liveRegionCustomElementName = `live-region-${uniqueId}`;
+
   class MessageEvent extends Event {
     constructor(type, { message, ...options }) {
       super(type, options);
@@ -60,7 +66,7 @@ if (!("ariaNotify" in Element.prototype)) {
   }
 
   customElements.define(
-    "live-region",
+    liveRegionCustomElementName,
     class extends HTMLElement {
       #queue = new MessageQueue(this);
 
@@ -103,11 +109,11 @@ if (!("ariaNotify" in Element.prototype)) {
     { priority = "none", interrupt = "none" } = {}
   ) {
     // Re-use 'live-region', if it already exists
-    let liveRegion = document.querySelector("live-region");
+    let liveRegion = document.querySelector(liveRegionCustomElementName);
 
     // Create 'live-region', if it doesn’t exist
     if (!liveRegion) {
-      liveRegion = document.createElement("live-region");
+      liveRegion = document.createElement(liveRegionCustomElementName);
       document.body.appendChild(liveRegion);
     }
 
