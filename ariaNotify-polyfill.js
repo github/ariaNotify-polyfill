@@ -7,20 +7,10 @@ if (!("ariaNotify" in Element.prototype)) {
     uniqueId = crypto.randomUUID();
   } catch {}
 
+  const passkey = Symbol();
+
   /** @type {string} */
   const liveRegionCustomElementName = `live-region-${uniqueId}`;
-
-  class MessageEvent extends Event {
-    /**
-     * @param {string} type
-     * @param {object} options
-     * @param {string} options.message
-     */
-    constructor(type, { message, ...options }) {
-      super(type, options);
-      this.message = message;
-    }
-  }
 
   class Message {
     /** @type {Element} */
@@ -35,6 +25,8 @@ if (!("ariaNotify" in Element.prototype)) {
     /** @type {"all" | "pending" | "none"} */
     interrupt = "none";
 
+    #cancel = () => {};
+
     /**
      * @param {object} message
      * @param {Element} message.element
@@ -42,7 +34,7 @@ if (!("ariaNotify" in Element.prototype)) {
      * @param {"important" | "none"} message.priority
      * @param {"all" | "pending" | "none"} message.interrupt
      */
-    constructor({ element, message, priority, interrupt }) {
+    constructor({ element, message, priority = "none", interrupt = "none" }) {
       this.element = element;
       this.message = message;
       this.priority = priority;
@@ -62,53 +54,75 @@ if (!("ariaNotify" in Element.prototype)) {
       );
     }
 
-    /**
-     * Send a 'new-message…' event with this message’s message.
-     * @returns {void}
-     */
-    announce() {
-      this.element.dispatchEvent(
-        new MessageEvent(`new-message-${uniqueId}`, {
-          message: this.message ?? "",
-        })
+    #canAnnounce() {
+      return (
+        this.element.isConnected &&
+        // Elements within inert containers should not be announced.
+        !this.element.closest("[inert]") &&
+        // If there is a modal element on the page, everything outside of it is implicitly inert.
+        // This can be checked by seeing if the element is within the modal, if the modal is present.
+        (this.element.ownerDocument
+          .querySelector(":modal")
+          ?.contains(this.element) ??
+          true)
       );
     }
 
+    #estimatedTimer() {
+      // Assumptions:
+      // - Average speech rate is around 4 words per second. 
+      // - Average braille reading speed is around 2 words per second.
+      // Therefore we estimate a time of 500ms per word.
+      const ms = (this.message.split(/\s/g).length || 1) * 500;
+      return /** @type {Promise<void>} */(new Promise((resolve) => {
+        let timer = setTimeout(resolve, ms)
+        this.#cancel = () => {
+          resolve();
+          clearTimeout(timer)
+        }
+      }));
+    }
+
+    cancel() {
+      this.#cancel();
+    }
+
     /**
-     * Send a 'new-message…' event with an empty message.
-     * @returns {void}
+     * Send a 'new-message…' event with this message’s message.
+     * @returns {Promise<void>}
      */
-    destroy() {
-      this.element.dispatchEvent(
-        new MessageEvent(`new-message-${uniqueId}`, {
-          message: "",
-        })
-      );
+    async announce() {
+      // Skip an unannounceable message.
+      if (!this.#canAnnounce()) {
+        return;
+      }
+      const {element, message} = this;
+      let root = (element.closest('dialog') || element.getRootNode())
+      if (!root || root instanceof Document) root = document.body;
+
+      // Re-use 'live-region', if it already exists
+      // @ts-ignore: ts(2339)
+      let liveRegion = root.querySelector(liveRegionCustomElementName);
+
+      // Create 'live-region', if it doesn’t exist
+      if (!liveRegion) {
+        liveRegion = document.createElement(liveRegionCustomElementName);
+        // @ts-ignore: ts(2339)
+        root.append(liveRegion);
+      }
+      
+      liveRegion.handleMessage(passkey, message)
+      await this.#estimatedTimer();
+      liveRegion.handleMessage(passkey, '')
     }
   }
 
-  class MessageQueue {
+  const queue = new (class MessageQueue {
     /** @type {Message[]} */
     #queue = [];
 
     /** @type {Message | undefined | null} */
     #currentMessage;
-
-    /** @type {number} */
-    #interval = 500; // TODO: Vary based on message length.
-
-    /** @type {number} */
-    #intervalId = setInterval(() => this.#dequeue(), this.#interval);
-
-    /**
-     * Destroy the current message, then announce the next message.
-     * @returns {void}
-     */
-    #dequeue() {
-      this.#currentMessage?.destroy();
-      this.#currentMessage = this.#queue.shift();
-      this.#currentMessage?.announce();
-    }
 
     /**
      * Add the given message to the queue.
@@ -120,8 +134,7 @@ if (!("ariaNotify" in Element.prototype)) {
 
       if (interrupt === "all" && this.#currentMessage?.matches(message)) {
         // Immediately flush the current message
-        this.#currentMessage?.destroy();
-        this.#currentMessage = null;
+        this.#currentMessage.cancel()
       }
 
       if (interrupt === "all" || interrupt === "pending") {
@@ -142,95 +155,50 @@ if (!("ariaNotify" in Element.prototype)) {
         // Insert at the end
         this.#queue.push(message);
       }
+
+      if (!this.#currentMessage) {
+        this.#processNext()
+      }
     }
 
-    /**
-     * Remove messages associated with the given element from the queue.
-     * @param {Node} element
-     */
-    flushElement(element) {
-      this.#queue = this.#queue.filter(
-        (message) => message.element !== element
-      );
+    async #processNext() {
+      this.#currentMessage = this.#queue.shift();
+      if (!this.#currentMessage) return
+      await this.#currentMessage.announce();
+      this.#processNext();
     }
-  }
+  })
 
   customElements.define(
     liveRegionCustomElementName,
     class LiveRegionCustomElement extends HTMLElement {
-      /** @type {MessageQueue} */
-      #queue = new MessageQueue();
-
-      /** @type {MutationObserver} */
-      #removedElementObserver = new MutationObserver((mutationList) => {
-        for (const mutation of mutationList) {
-          if (mutation.type === "childList") {
-            for (const removedNode of mutation.removedNodes) {
-              // Remove messages associated with the removed element from the queue.
-              this.#queue.flushElement(removedNode);
-            }
-          }
-        }
-      });
+      #shadowRoot = this.attachShadow({mode:'closed'});
 
       connectedCallback() {
         this.role = "status";
         this.ariaLive = "polite";
         this.style.position = "absolute";
         this.style.left = "-9999px";
-        this.addEventListener(`new-message-${uniqueId}`, this);
-        this.#removedElementObserver.observe(document.body, {
-          childList: true,
-          subtree: true,
-        });
       }
 
-      handleEvent(event) {
-        if (event.type === `new-message-${uniqueId}`) {
-          this.textContent = event.message;
-        }
-      }
-
-      /**
-       * @param {Element} element
-       * @param {string} message
-       * @param {object} options
-       * @param {"important" | "none"} options.priority
-       * @param {"all" | "pending" | "none"} options.interrupt
-       */
-      notifyFromElement(element, message, { priority, interrupt }) {
-        this.#queue.enqueue(
-          new Message({
-            element,
-            message,
-            // Ensure values are valid
-            priority: priority === "important" ? "important" : "none",
-            interrupt:
-              interrupt === "all" || interrupt === "pending"
-                ? interrupt
-                : "none",
-          })
-        );
+      handleMessage(key = null, message = '') {
+        if (passkey !== key) return;
+        this.#shadowRoot.textContent = message;
       }
     }
   );
 
+  /**
+   * @param {string} message
+   * @param {object} options
+   * @param {"important" | "none"} [options.priority]
+   * @param {"all" | "pending" | "none" } [options.interrupt]
+   */
   // @ts-ignore: ts(2339)
   Element.prototype.ariaNotify = function (
     message,
     { priority = "none", interrupt = "none" } = {}
   ) {
-    // Re-use 'live-region', if it already exists
-    let liveRegion = document.querySelector(liveRegionCustomElementName);
-
-    // Create 'live-region', if it doesn’t exist
-    if (!liveRegion) {
-      liveRegion = document.createElement(liveRegionCustomElementName);
-      document.body.appendChild(liveRegion);
-    }
-
-    // Add message to 'live-region'’s queue
-    // @ts-ignore: ts(2339)
-    liveRegion.notifyFromElement(this, message, { priority, interrupt });
+    queue.enqueue(new Message({ element: this, message, priority, interrupt }))
   };
 }
