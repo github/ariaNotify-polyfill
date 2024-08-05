@@ -7,6 +7,10 @@ if (!("ariaNotify" in Element.prototype)) {
     uniqueId = crypto.randomUUID();
   } catch {}
 
+  /**
+   * A unique symbol to prevent unauthorized access to the 'live-region' element.
+   *  @type {Symbol}
+   */
   const passkey = Symbol();
 
   /** @type {string} */
@@ -25,6 +29,17 @@ if (!("ariaNotify" in Element.prototype)) {
     /** @type {"all" | "pending" | "none"} */
     interrupt = "none";
 
+    /**
+     * Translation from ARIA Notify’s `interrupt` to `aria-live` values
+     * @type {"assertive" | "polite" }
+     */
+    get #destination() {
+      return this.interrupt === "all" || this.interrupt === "pending"
+        ? "assertive"
+        : "polite";
+    }
+
+    /** @type {() => void} */
     #cancel = () => {};
 
     /**
@@ -54,6 +69,10 @@ if (!("ariaNotify" in Element.prototype)) {
       );
     }
 
+    /**
+     * Whether this message can be announced.
+     * @returns {boolean}
+     */
     #canAnnounce() {
       return (
         this.element.isConnected &&
@@ -68,21 +87,28 @@ if (!("ariaNotify" in Element.prototype)) {
       );
     }
 
+    /**
+     * A promise that resolves after an estimated time for the message to be read.
+     * @returns {Promise<void>}
+     */
     #estimatedTimer() {
       // Assumptions:
-      // - Average speech rate is around 4 words per second. 
+      // - Average speech rate is around 4 words per second.
       // - Average braille reading speed is around 2 words per second.
       // Therefore we estimate a time of 500ms per word.
       const ms = (this.message.split(/\s/g).length || 1) * 500;
-      return /** @type {Promise<void>} */(new Promise((resolve) => {
-        let timer = setTimeout(resolve, ms)
-        this.#cancel = () => {
-          resolve();
-          clearTimeout(timer)
-        }
-      }));
+      return /** @type {Promise<void>} */ (
+        new Promise((resolve) => {
+          let timer = setTimeout(resolve, ms);
+          this.#cancel = () => {
+            resolve();
+            clearTimeout(timer);
+          };
+        })
+      );
     }
 
+    /** @returns {void} */
     cancel() {
       this.#cancel();
     }
@@ -96,24 +122,27 @@ if (!("ariaNotify" in Element.prototype)) {
       if (!this.#canAnnounce()) {
         return;
       }
-      const {element, message} = this;
-      let root = (element.closest('dialog') || element.getRootNode())
+      const { element, message } = this;
+      let root = /** @type {Element} */ (
+        element.closest("dialog") || element.getRootNode()
+      );
       if (!root || root instanceof Document) root = document.body;
 
       // Re-use 'live-region', if it already exists
-      // @ts-ignore: ts(2339)
+      /** @type {LiveRegionCustomElement | null} */
       let liveRegion = root.querySelector(liveRegionCustomElementName);
 
       // Create 'live-region', if it doesn’t exist
       if (!liveRegion) {
-        liveRegion = document.createElement(liveRegionCustomElementName);
-        // @ts-ignore: ts(2339)
+        liveRegion = /** @type {LiveRegionCustomElement} */ (
+          document.createElement(liveRegionCustomElementName)
+        );
         root.append(liveRegion);
       }
-      
-      liveRegion.handleMessage(passkey, message)
+
+      liveRegion.handleMessage(passkey, message, this.#destination);
       await this.#estimatedTimer();
-      liveRegion.handleMessage(passkey, '')
+      liveRegion.handleMessage(passkey, "", this.#destination);
     }
   }
 
@@ -134,7 +163,7 @@ if (!("ariaNotify" in Element.prototype)) {
 
       if (interrupt === "all" && this.#currentMessage?.matches(message)) {
         // Immediately flush the current message
-        this.#currentMessage.cancel()
+        this.#currentMessage.cancel();
       }
 
       if (interrupt === "all" || interrupt === "pending") {
@@ -157,36 +186,61 @@ if (!("ariaNotify" in Element.prototype)) {
       }
 
       if (!this.#currentMessage) {
-        this.#processNext()
+        this.#processNext();
       }
     }
 
     async #processNext() {
       this.#currentMessage = this.#queue.shift();
-      if (!this.#currentMessage) return
+      if (!this.#currentMessage) return;
       await this.#currentMessage.announce();
       this.#processNext();
     }
-  })
+  })();
 
-  customElements.define(
-    liveRegionCustomElementName,
-    class LiveRegionCustomElement extends HTMLElement {
-      #shadowRoot = this.attachShadow({mode:'closed'});
+  class LiveRegionCustomElement extends HTMLElement {
+    #shadowRoot = this.attachShadow({ mode: "closed" });
 
-      connectedCallback() {
-        this.role = "status";
-        this.ariaLive = "polite";
-        this.style.position = "absolute";
-        this.style.left = "-9999px";
-      }
+    /** @type {HTMLDivElement | null} */
+    get #polite() {
+      return this.#shadowRoot.querySelector("[aria-live='polite']");
+    }
 
-      handleMessage(key = null, message = '') {
-        if (passkey !== key) return;
-        this.#shadowRoot.textContent = message;
+    /** @type {HTMLDivElement | null} */
+    get #assertive() {
+      return this.#shadowRoot.querySelector("[aria-live='assertive']");
+    }
+
+    connectedCallback() {
+      const polite = document.createElement("div");
+      polite.ariaLive = "polite";
+      polite.ariaAtomic = "true";
+      polite.style.position = "absolute";
+      polite.style.left = "-9999px";
+      const assertive = document.createElement("div");
+      assertive.ariaLive = "assertive";
+      assertive.ariaAtomic = "true";
+      assertive.style.position = "absolute";
+      assertive.style.left = "-9999px";
+      this.#shadowRoot.append(polite, assertive);
+    }
+
+    /**
+     * @param {Symbol | null} key
+     * @param {string} message
+     * @param {"polite" | "assertive"} destination
+     * @returns
+     */
+    handleMessage(key = null, message = "", destination) {
+      if (passkey !== key) return;
+      if (destination === "assertive" && this.#assertive) {
+        this.#assertive.textContent = message;
+      } else if (destination === "polite" && this.#polite) {
+        this.#polite.textContent = message;
       }
     }
-  );
+  }
+  customElements.define(liveRegionCustomElementName, LiveRegionCustomElement);
 
   /**
    * @param {string} message
@@ -194,11 +248,10 @@ if (!("ariaNotify" in Element.prototype)) {
    * @param {"important" | "none"} [options.priority]
    * @param {"all" | "pending" | "none" } [options.interrupt]
    */
-  // @ts-ignore: ts(2339)
-  Element.prototype.ariaNotify = function (
+  Element.prototype["ariaNotify"] = function (
     message,
     { priority = "none", interrupt = "none" } = {}
   ) {
-    queue.enqueue(new Message({ element: this, message, priority, interrupt }))
+    queue.enqueue(new Message({ element: this, message, priority, interrupt }));
   };
 }
