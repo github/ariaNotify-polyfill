@@ -87,8 +87,8 @@ if (!("ariaNotify" in Element.prototype)) {
       );
     }
 
-    /** @returns {void} */
-    announce() {
+    /** @returns {Promise<void>} */
+    async announce() {
       // Skip an unannounceable message.
       if (!this.#canAnnounce()) {
         return;
@@ -118,6 +118,7 @@ if (!("ariaNotify" in Element.prototype)) {
         root.append(liveRegion);
       }
 
+      await sleep(250);
       liveRegion.handleMessage(passkey, this.message);
     }
   }
@@ -165,7 +166,6 @@ if (!("ariaNotify" in Element.prototype)) {
       this.#currentMessage = this.#queue.shift();
       if (!this.#currentMessage) return;
       await this.#currentMessage.announce();
-      await sleep(250);
       this.#processNext();
     }
   })();
