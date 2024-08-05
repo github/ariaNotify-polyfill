@@ -16,6 +16,14 @@ if (!("ariaNotify" in Element.prototype)) {
   /** @type {string} */
   const liveRegionCustomElementName = `live-region-${uniqueId}`;
 
+  /**
+   * @param {number} ms
+   * @returns {Promise<void>}
+   */
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   class Message {
     /** @type {Element} */
     element;
@@ -29,18 +37,10 @@ if (!("ariaNotify" in Element.prototype)) {
     /** @type {"all" | "pending" | "none"} */
     interrupt = "none";
 
-    /**
-     * Translation from ARIA Notify’s `interrupt` to `aria-live` values
-     * @type {"assertive" | "polite" }
-     */
-    get #destination() {
-      return this.interrupt === "all" || this.interrupt === "pending"
-        ? "assertive"
-        : "polite";
+    /** @type {boolean} */
+    get #shouldFlushOthers() {
+      return this.interrupt === "all" || this.interrupt === "pending";
     }
-
-    /** @type {() => void} */
-    #cancel = () => {};
 
     /**
      * @param {object} message
@@ -87,48 +87,30 @@ if (!("ariaNotify" in Element.prototype)) {
       );
     }
 
-    /**
-     * A promise that resolves after an estimated time for the message to be read.
-     * @returns {Promise<void>}
-     */
-    #estimatedTimer() {
-      const ms = 250;
-      return /** @type {Promise<void>} */ (
-        new Promise((resolve) => {
-          let timer = setTimeout(resolve, ms);
-          this.#cancel = () => {
-            resolve();
-            clearTimeout(timer);
-          };
-        })
-      );
-    }
-
     /** @returns {void} */
-    cancel() {
-      this.#cancel();
-    }
-
-    /**
-     * Send a 'new-message…' event with this message’s message.
-     * @returns {Promise<void>}
-     */
-    async announce() {
+    announce() {
       // Skip an unannounceable message.
       if (!this.#canAnnounce()) {
         return;
       }
-      const { element, message } = this;
+
+      // Get root element
       let root = /** @type {Element} */ (
-        element.closest("dialog") || element.getRootNode()
+        this.element.closest("dialog") || this.element.getRootNode()
       );
       if (!root || root instanceof Document) root = document.body;
 
-      // Re-use 'live-region', if it already exists
+      // Get 'live-region', if it already exists
       /** @type {LiveRegionCustomElement | null} */
       let liveRegion = root.querySelector(liveRegionCustomElementName);
 
-      // Create 'live-region', if it doesn’t exist
+      // Destroy 'live-region', if it exists and should be flushed
+      if (this.#shouldFlushOthers && liveRegion) {
+        liveRegion.remove();
+        liveRegion = null;
+      }
+
+      // Create (or recreate) 'live-region', if it doesn’t exist
       if (!liveRegion) {
         liveRegion = /** @type {LiveRegionCustomElement} */ (
           document.createElement(liveRegionCustomElementName)
@@ -136,9 +118,7 @@ if (!("ariaNotify" in Element.prototype)) {
         root.append(liveRegion);
       }
 
-      liveRegion.handleMessage(passkey, message, this.#destination);
-      await this.#estimatedTimer();
-      liveRegion.handleMessage(passkey, "", this.#destination);
+      liveRegion.handleMessage(passkey, this.message);
     }
   }
 
@@ -156,11 +136,6 @@ if (!("ariaNotify" in Element.prototype)) {
      */
     enqueue(message) {
       const { priority, interrupt } = message;
-
-      if (interrupt === "all" && this.#currentMessage?.matches(message)) {
-        // Immediately flush the current message
-        this.#currentMessage.cancel();
-      }
 
       if (interrupt === "all" || interrupt === "pending") {
         // Remove other messages with the same element, priority, and interrupt
@@ -190,6 +165,7 @@ if (!("ariaNotify" in Element.prototype)) {
       this.#currentMessage = this.#queue.shift();
       if (!this.#currentMessage) return;
       await this.#currentMessage.announce();
+      await sleep(250);
       this.#processNext();
     }
   })();
@@ -197,43 +173,20 @@ if (!("ariaNotify" in Element.prototype)) {
   class LiveRegionCustomElement extends HTMLElement {
     #shadowRoot = this.attachShadow({ mode: "closed" });
 
-    /** @type {HTMLDivElement | null} */
-    get #polite() {
-      return this.#shadowRoot.querySelector("[aria-live='polite']");
-    }
-
-    /** @type {HTMLDivElement | null} */
-    get #assertive() {
-      return this.#shadowRoot.querySelector("[aria-live='assertive']");
-    }
-
     connectedCallback() {
-      const polite = document.createElement("div");
-      polite.ariaLive = "polite";
-      polite.ariaAtomic = "true";
-      polite.style.position = "absolute";
-      polite.style.left = "-9999px";
-      const assertive = document.createElement("div");
-      assertive.ariaLive = "assertive";
-      assertive.ariaAtomic = "true";
-      assertive.style.position = "absolute";
-      assertive.style.left = "-9999px";
-      this.#shadowRoot.append(polite, assertive);
+      this.ariaLive = "polite";
+      this.ariaAtomic = "true";
+      this.style.position = "absolute";
+      this.style.left = "-9999px";
     }
 
     /**
      * @param {Symbol | null} key
      * @param {string} message
-     * @param {"polite" | "assertive"} destination
-     * @returns
      */
-    handleMessage(key = null, message = "", destination) {
+    handleMessage(key = null, message = "") {
       if (passkey !== key) return;
-      if (destination === "assertive" && this.#assertive) {
-        this.#assertive.textContent = message;
-      } else if (destination === "polite" && this.#polite) {
-        this.#polite.textContent = message;
-      }
+      this.#shadowRoot.textContent = message;
     }
   }
   customElements.define(liveRegionCustomElementName, LiveRegionCustomElement);
