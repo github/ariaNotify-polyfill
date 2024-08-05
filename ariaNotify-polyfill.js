@@ -92,11 +92,7 @@ if (!("ariaNotify" in Element.prototype)) {
      * @returns {Promise<void>}
      */
     #estimatedTimer() {
-      // Assumptions:
-      // - Average speech rate is around 4 words per second.
-      // - Average braille reading speed is around 2 words per second.
-      // Therefore we estimate a time of 500ms per word.
-      const ms = (this.message.split(/\s/g).length || 1) * 500;
+      const ms = 250;
       return /** @type {Promise<void>} */ (
         new Promise((resolve) => {
           let timer = setTimeout(resolve, ms);
