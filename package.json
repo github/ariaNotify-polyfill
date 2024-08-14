@@ -1,0 +1,16 @@
+{
+  "name": "@github/arianotify-polyfill",
+  "version": "1.0.0",
+  "description": "Polyfill for the ARIA Notification API",
+  "keywords": [],
+  "license": "MIT",
+  "author": "GitHub Inc.",
+  "main": "ariaNotify-polyfill.js",
+  "directories": {
+    "example": "examples"
+  },
+  "files": [],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
