@@ -2,23 +2,133 @@
 <html lang="en">
   <head>
     <title>ariaNotify Polyfill Examples</title>
+    <style>
+      form {
+        display: flex;
+        gap: 0.5rem;
+        border: 1px solid silver;
+        border-radius: 0.25rem;
+        padding: 1rem;
+      }
+      table {
+        margin-block: 1rem;
+      }
+      label {
+        display: flex;
+        width: 15ch;
+        flex-direction: column;
+      }
+      label span {
+        display: inline-block;
+      }
+      label input, label select {
+        flex: 1;
+      }
+    </style>
   </head>
   <body>
     <main>
       <h1>ariaNotify Polyfill Examples</h1>
-      <ul>
-        <li><a href="./kanban/index.html">Kanban</a></li>
-        <li><a href="./suggested-text/index.html">Suggested Text</a></li>
-      </ul>
-    </main>
-    <footer>
+      <p>
+        ariaNotify is a new API for announcing notifications to assistive technologies.
+        It allows developers to queue individual notifications using different queing strategies.
+        Try it out below!
+      </p>
       <p>
         View the code on GitHub:
         <a href="https://github.com/github/ariaNotify-polyfill"
           >github/ariaNotify-polyfill</a
         >
-        (Hubbers only, for now)
+        (Only accessible to GitHub employees, for now)
       </p>
-    </footer>
+
+      <h2>Example components</h2>
+      <ul>
+        <li><a href="./kanban/index.html">Kanban</a></li>
+        <li><a href="./suggested-text/index.html">Suggested Text</a></li>
+      </ul>
+
+      <h2>Playground</h2>
+      <p>
+        This playground allows you to queue a set of messages of different types, and then dispatch them all at once to see
+        how priority and interrupt values effect the queue order.
+      </p>
+      
+      <template id="form">
+        <li>
+          <form>
+            <label>
+              <span>Message:</span>
+              <input type="text" name="message">
+            </label>
+            <label>
+              <span>Interrupt:</span>
+              <select name="interrupt">
+                <option value="all">all</option>
+                <option value="pending">pending</option>
+                <option value="none" selected>none</option>
+              </select>
+            </label>
+            <label>
+              <span>Priority:</span>
+              <select name="priority">
+                <option value="important">important</option>
+                <option value="none" selected>none</option>
+              </select>
+            </label>
+            <button type=button class="delete">Delete</button>
+          </form>
+        </li>
+      </template>
+
+      <button id="add">Add new notification</button>
+      <button id="dispatch" disabled>Dispatch queue</button>
+      <button id="reset" disabled>Clear queue</button>
+
+      <ol id="queue">
+      </ol>
+
+      <p>
+        Pressing enqueue will dispatch all <code>ariaNotify()</code> method calls, at once, on the <code>button</code>.
+      </p>
+
+    </main>
+    <script type="module">
+      const words = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+      queue.addEventListener('click', event => {
+        if (event.target.matches('.delete')) {
+          event.target.closest('li').remove()
+        }
+      })
+      add.addEventListener('click', event => {
+        const nodes = form.content.cloneNode(true)
+        const i = queue.childElementCount
+        nodes.querySelector('[name=message]').value = words[i]
+        console.log(nodes)
+        queue.append(nodes)
+        dispatch.disabled = false
+        reset.disabled = false
+      }, true)
+      dispatch.addEventListener('click', event => {
+        for(const row of queue.children) {
+          const data = new FormData(row.querySelector('form'))
+          const message = data.get('message')
+          const opts = {
+            priority: data.get('priority'),
+            interrupt: data.get('interrupt'),
+          };
+          setTimeout(() => {
+            console.log(message, opts);
+            dispatch.ariaNotify(message, opts);
+          }, 100)
+        }
+      }, true)
+      reset.addEventListener('click', event => {
+        queue.replaceChildren()
+        dispatch.disabled = true
+        reset.disabled = true
+      })
+    </script>
+    <script src="./ariaNotify-polyfill.js"></script>
   </body>
 </html>
