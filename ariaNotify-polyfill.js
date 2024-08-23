@@ -186,6 +186,11 @@ if (!("ariaNotify" in Element.prototype)) {
      */
     handleMessage(key = null, message = "") {
       if (passkey !== key) return;
+      // This is a hack due to the way the aria live API works. A screen reader
+      // will not read a live region again if the text is the same. Adding a
+      // space character tells the browser that the live region has updated,
+      // which will cause it to read again, but with no audible difference.
+      if (this.#shadowRoot.textContent == message) message += "\u00A0";
       this.#shadowRoot.textContent = message;
     }
   }
