@@ -117,10 +117,7 @@
             priority: data.get('priority'),
             interrupt: data.get('interrupt'),
           };
-          setTimeout(() => {
-            console.log(message, opts);
-            dispatch.ariaNotify(message, opts);
-          }, 100)
+          dispatch.ariaNotify(message, opts);
         }
       }, true)
       reset.addEventListener('click', event => {
