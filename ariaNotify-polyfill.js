@@ -177,7 +177,11 @@ if (!("ariaNotify" in Element.prototype)) {
       this.ariaLive = "polite";
       this.ariaAtomic = "true";
       this.style.position = "absolute";
-      this.style.left = "-9999px";
+      this.style.width = "1px";
+      this.style.height = "1px";
+      this.style.overflow = "hidden";
+      this.style.clipPath = "rect(0 0 0 0)";
+      this.style.overflowWrap = "normal";
     }
 
     /**
