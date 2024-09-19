@@ -2,13 +2,13 @@
 
 Polyfill for the [ARIA Notification API](https://github.com/WICG/accessible-notifications/blob/main/README.md)
 
-The goal of this library is to polyfill `ariaNotify` so that it can be used seamlessly across browsers that support the native functionality, and those that don't. This adds the `Element.prototype.ariaNotify` function if it does not exist, emulating the native functionaltiy.
+The goal of this library is to polyfill `ariaNotify` so that it can be used seamlessly across browsers that support the native functionality, and those that don't. This adds the `Element.prototype.ariaNotify` function if it does not exist, emulating the native functionality.
 
 This is used in production on github.com.
 
 ## Background 
 
-In browsers where `ariaNotify` is supported it will emit a notification event. In browsers where it isn't supported this library will create a "fake" element that is an aria-live region, insert it into the DOM, and modify the text content of the element to place the given message in, acheiving a similar effect to the native functionality.
+In browsers where `ariaNotify` is supported it will emit a notification event. In browsers where it isn't supported this library will create a "fake" element that is an aria-live region, insert it into the DOM, and modify the text content of the element to place the given message in, achieving a similar effect to the native functionality.
 
 ## Requirements
 
