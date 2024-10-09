@@ -17,6 +17,8 @@ test.beforeEach(async ({ page }) => {
     waitUntil: "load",
   });
 
+  // From https://github.com/guidepup/guidepup-playwright/blob/34c3973dd98e19c81f468352e13bac5b8434b28f/src/voiceOverTest.ts#L97-L110:
+
   // Ensure the document is ready and focused.
   await page.bringToFront();
   await page.locator("body").waitFor();
