@@ -176,7 +176,8 @@ if (!("ariaNotify" in Element.prototype)) {
     connectedCallback() {
       this.ariaLive = "polite";
       this.ariaAtomic = "true";
-      this.style.margin = "-1px";
+      this.style.marginLeft = "-1px";
+      this.style.marginTop = "-1px";
       this.style.position = "absolute";
       this.style.width = "1px";
       this.style.height = "1px";
