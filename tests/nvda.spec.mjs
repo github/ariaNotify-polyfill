@@ -1,15 +1,12 @@
 // @ts-check
 
 import { test, expect } from "@playwright/test";
-import { voiceOver } from "@guidepup/guidepup";
+import { nvda, WindowsKeyCodes, WindowsModifiers } from "@guidepup/guidepup";
 
-// Pre-requisites:
-// - Run `defaults write com.apple.VoiceOver4/default SCREnableAppleScript 1`
-
-if (process.platform === 'darwin') {
+if (process.platform === "win32") {
   test.beforeAll(async () => {
-    // Start VoiceOver; ignore hints/descriptions
-    await voiceOver.start();
+    // Start NVDA
+    await nvda.start();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -18,7 +15,10 @@ if (process.platform === 'darwin') {
       waitUntil: "load",
     });
 
-    // From https://github.com/guidepup/guidepup-playwright/blob/34c3973dd98e19c81f468352e13bac5b8434b28f/src/voiceOverTest.ts#L97-L110:
+    // Adapted from https://github.com/guidepup/guidepup-playwright/blob/34c3973dd98e19c81f468352e13bac5b8434b28f/src/nvdaTest.ts#L137-L167:
+
+    // Make sure NVDA is not in focus mode.
+    await nvda.perform(nvda.keyboardCommands.exitFocusMode);
 
     // Ensure the document is ready and focused.
     await page.bringToFront();
@@ -26,28 +26,34 @@ if (process.platform === 'darwin') {
     await page.locator("body").focus();
 
     // Navigate to the beginning of the web content.
-    await voiceOver.interact();
-    await voiceOver.perform(voiceOver.keyboardCommands.jumpToLeftEdge);
+    await nvda.perform(nvda.keyboardCommands.readNextFocusableItem);
+    await nvda.perform(nvda.keyboardCommands.toggleBetweenBrowseAndFocusMode);
+    await nvda.perform(nvda.keyboardCommands.toggleBetweenBrowseAndFocusMode);
+    await nvda.perform(nvda.keyboardCommands.exitFocusMode);
+    await nvda.perform({
+      keyCode: [WindowsKeyCodes.Home],
+      modifiers: [WindowsModifiers.Control],
+    });
 
     // Clear out logs.
-    await voiceOver.clearItemTextLog();
-    await voiceOver.clearSpokenPhraseLog();
+    await nvda.clearItemTextLog();
+    await nvda.clearSpokenPhraseLog();
   });
 
   test.afterAll(async () => {
     // Stop VoiceOver
-    await voiceOver.stop();
+    await nvda.stop();
   });
 
   test("SuggestedText", async ({ page }) => {
     // Type a completable string in the textarea
-    voiceOver.type("a");
+    nvda.type("a");
 
     // Wait for the suggestion to appear
     await page.waitForTimeout(4000);
 
     // Assert that the spoken phrases are as expected
-    const lastSpokenPhrase = await voiceOver.lastSpokenPhrase();
+    const lastSpokenPhrase = await nvda.lastSpokenPhrase();
     expect(lastSpokenPhrase.startsWith("a")).toBe(true);
     expect(lastSpokenPhrase.includes("Suggestion: acceptable")).toBe(true);
     expect(
@@ -55,5 +61,5 @@ if (process.platform === 'darwin') {
     ).toBe(true);
   });
 } else {
-  test("Skipping macos tests", () => {});
+  test("Skipping Windows tests", () => {});
 }
