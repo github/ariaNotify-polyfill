@@ -5,7 +5,7 @@ import { nvda, WindowsKeyCodes, WindowsModifiers } from "@guidepup/guidepup";
 
 // Pre-requisites:
 // - Run `REG ADD HKCU\Software\Guidepup\Nvda`
-// - Run `REG ADD HKCU\Software\Guidepup\Nvda /v guidepup_nvda_0.1.1-2021.3.1 /t REG_SZ /d '"C:\Program Files (x86)\NVDA\"'`
+// - Run `REG ADD HKCU\Software\Guidepup\Nvda /v guidepup_nvda_0.1.1-2021.3.1 /t REG_SZ /d "C:\Program Files (x86)\NVDA\\"`
 // (version is from https://github.com/guidepup/setup/blob/82179ec8915680344d0db320422dd18e29593eb9/package.json#L60C27-L60C41)
 
 if (process.platform === "win32") {
@@ -15,7 +15,7 @@ if (process.platform === "win32") {
   });
 
   test.beforeEach(async ({ page }) => {
-    // Navigate to suggested text example page
+    // Navigate to suggested test example page
     await page.goto("suggested-text/index.html", {
       waitUntil: "load",
     });
@@ -46,7 +46,7 @@ if (process.platform === "win32") {
   });
 
   test.afterAll(async () => {
-    // Stop VoiceOver
+    // Stop NVDA
     await nvda.stop();
   });
 
