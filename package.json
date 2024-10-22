@@ -14,7 +14,7 @@
     "test": "npx playwright test"
   },
   "devDependencies": {
-    "@guidepup/guidepup": "^0.22.3",
+    "@guidepup/guidepup": "^0.24.0",
     "@guidepup/playwright": "^0.14.1",
     "@playwright/test": "^1.48.0"
   }
