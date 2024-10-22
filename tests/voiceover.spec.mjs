@@ -13,7 +13,7 @@ if (process.platform === "darwin") {
   });
 
   test.beforeEach(async ({ page }) => {
-    // Navigate to Guidepup GitHub page
+    // Navigate to suggested text example page
     await page.goto("suggested-text/index.html", {
       waitUntil: "load",
     });
