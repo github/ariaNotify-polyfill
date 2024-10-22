@@ -41,7 +41,7 @@ if (process.platform === "darwin") {
 
   test("SuggestedText", async ({ page }) => {
     // Type a completable string in the textarea
-    voiceOver.type("a");
+    await voiceOver.type("a");
 
     // Wait for the suggestion to appear
     await page.waitForTimeout(4000);
