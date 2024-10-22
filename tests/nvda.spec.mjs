@@ -1,6 +1,8 @@
 // @ts-check
-import { test, expect } from "@playwright/test";
+
+import { test as baseTest, expect } from "@playwright/test";
 import { nvda, WindowsKeyCodes, WindowsModifiers } from "@guidepup/guidepup";
+import path from "node:path";
 
 // Pre-requisites:
 // - Install NVDA
@@ -21,12 +23,30 @@ import { nvda, WindowsKeyCodes, WindowsModifiers } from "@guidepup/guidepup";
 //   - Run `REG ADD HKCU\Software\Guidepup\Nvda /v guidepup_nvda_0.1.1-2021.3.1 /t REG_SZ /d "C:\Program Files (x86)\NVDA\\"`
 // (version is from https://github.com/guidepup/setup/blob/82179ec8915680344d0db320422dd18e29593eb9/package.json#L60C27-L60C41)
 
+const test = baseTest.extend({
+  context: async ({ context }, run) => {
+    await context.route("**/*", (route, request) =>
+      route.fulfill({
+        path: path.join(
+          import.meta.dirname,
+          "..",
+          new URL(request.url()).pathname
+        ),
+      })
+    );
+    await run(context);
+  },
+});
+
 if (process.platform === "win32") {
   test.beforeEach(async ({ page }) => {
     // Navigate to suggested test example page
-    await page.goto("suggested-text/index.html", {
-      waitUntil: "load",
-    });
+    await page.goto(
+      "http://localhost:3333/examples/suggested-text/index.html",
+      {
+        waitUntil: "load",
+      }
+    );
 
     // Start NVDA
     await nvda.start();

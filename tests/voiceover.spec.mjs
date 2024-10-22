@@ -1,10 +1,26 @@
 // @ts-check
 
-import { test, expect } from "@playwright/test";
+import { test as baseTest, expect } from "@playwright/test";
 import { voiceOver } from "@guidepup/guidepup";
+import path from "node:path";
 
 // Pre-requisites:
 // - Run `defaults write com.apple.VoiceOver4/default SCREnableAppleScript 1`
+
+const test = baseTest.extend({
+  context: async ({ context }, run) => {
+    await context.route("**/*", (route, request) =>
+      route.fulfill({
+        path: path.join(
+          import.meta.dirname,
+          "..",
+          new URL(request.url()).pathname
+        ),
+      })
+    );
+    await run(context);
+  },
+});
 
 if (process.platform === "darwin") {
   test.beforeAll(async () => {
@@ -14,9 +30,12 @@ if (process.platform === "darwin") {
 
   test.beforeEach(async ({ page }) => {
     // Navigate to suggested text example page
-    await page.goto("suggested-text/index.html", {
-      waitUntil: "load",
-    });
+    await page.goto(
+      "http://localhost:3333/examples/suggested-text/index.html",
+      {
+        waitUntil: "load",
+      }
+    );
 
     // From https://github.com/guidepup/guidepup-playwright/blob/34c3973dd98e19c81f468352e13bac5b8434b28f/src/voiceOverTest.ts#L97-L110:
 

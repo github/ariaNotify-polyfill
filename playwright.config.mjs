@@ -13,9 +13,6 @@ const config = {
       use: {
         ...devices["Desktop Edge"],
         channel: "msedge",
-        baseURL: `file://${url.fileURLToPath(
-          new URL("./examples/", import.meta.url)
-        )}`,
       },
     },
   ],
