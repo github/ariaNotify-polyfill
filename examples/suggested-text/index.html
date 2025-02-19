@@ -91,15 +91,13 @@
       */
       suggester.addEventListener("MakeSuggestion", (event) => {
         suggester.ariaNotify(`Suggestion: ${event.word}`, {
-          priority: "important",
-          interrupt: "all",
+          priority: "high"
         });
         clearTimeout(timer);
         timer = setTimeout(() => {
           suggester.ariaNotify("Press right arrow to commit suggestion", {
             notificationId: "application-keyboard-hint",
-            priority: "none",
-            interrupt: "all",
+            priority: "normal"
           });
         }, 2000);
         suggester.addEventListener("keyup", () => clearTimeout(timer), {
@@ -109,8 +107,7 @@
       });
       suggester.addEventListener("Committed", (event) => {
         suggester.ariaNotify(event.word, {
-          priority: "important",
-          interrupt: "all",
+          priority: "high"
         });
       });
     </script>

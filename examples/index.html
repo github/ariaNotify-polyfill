@@ -51,7 +51,7 @@
       <h2>Playground</h2>
       <p>
         This playground allows you to queue a set of messages of different types, and then dispatch them all at once to see
-        how priority and interrupt values effect the queue order.
+        how priority effects the queue order.
       </p>
       
       <template id="form">
@@ -62,18 +62,10 @@
               <input type="text" name="message">
             </label>
             <label>
-              <span>Interrupt:</span>
-              <select name="interrupt">
-                <option value="all">all</option>
-                <option value="pending">pending</option>
-                <option value="none" selected>none</option>
-              </select>
-            </label>
-            <label>
               <span>Priority:</span>
               <select name="priority">
-                <option value="important">important</option>
-                <option value="none" selected>none</option>
+                <option value="high">high</option>
+                <option value="normal" selected>normal</option>
               </select>
             </label>
             <button type=button class="delete">Delete</button>
@@ -115,7 +107,6 @@
           const message = data.get('message')
           const opts = {
             priority: data.get('priority'),
-            interrupt: data.get('interrupt'),
           };
           dispatch.ariaNotify(message, opts);
         }
