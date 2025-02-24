@@ -31,42 +31,19 @@ if (!("ariaNotify" in Element.prototype)) {
     /** @type {string} */
     message;
 
-    /** @type {"important" | "none"} */
-    priority = "none";
-
-    /** @type {"all" | "pending" | "none"} */
-    interrupt = "none";
-
-    /** @type {boolean} */
-    get #shouldFlushOthers() {
-      return this.interrupt === "all" || this.interrupt === "pending";
-    }
+    /** @type {"high" | "normal"} */
+    priority = "normal";
 
     /**
      * @param {object} message
      * @param {Element} message.element
      * @param {string} message.message
-     * @param {"important" | "none"} message.priority
-     * @param {"all" | "pending" | "none"} message.interrupt
+     * @param {"high" | "normal"} message.priority
      */
-    constructor({ element, message, priority = "none", interrupt = "none" }) {
+    constructor({ element, message, priority = "normal" }) {
       this.element = element;
       this.message = message;
       this.priority = priority;
-      this.interrupt = interrupt;
-    }
-
-    /**
-     * Whether this message and the given message are equivalent.
-     * @param {Message} message
-     * @returns {boolean}
-     */
-    matches(message) {
-      return (
-        this.element === message.element &&
-        this.priority === message.priority &&
-        this.interrupt === message.interrupt
-      );
     }
 
     /**
@@ -104,12 +81,6 @@ if (!("ariaNotify" in Element.prototype)) {
       /** @type {LiveRegionCustomElement | null} */
       let liveRegion = root.querySelector(liveRegionCustomElementName);
 
-      // Destroy 'live-region', if it exists and should be flushed
-      if (this.#shouldFlushOthers && liveRegion) {
-        liveRegion.remove();
-        liveRegion = null;
-      }
-
       // Create (or recreate) 'live-region', if it doesn’t exist
       if (!liveRegion) {
         liveRegion = /** @type {LiveRegionCustomElement} */ (
@@ -136,22 +107,15 @@ if (!("ariaNotify" in Element.prototype)) {
      * @returns {void}
      */
     enqueue(message) {
-      const { priority, interrupt } = message;
+      const { priority } = message;
 
-      if (interrupt === "all" || interrupt === "pending") {
-        // Remove other messages with the same element, priority, and interrupt
-        this.#queue = this.#queue.filter(
-          (message) => !message.matches(message)
-        );
-      }
-
-      if (priority === "important") {
-        // Insert after the last important message, or at the beginning
+      if (priority === "high") {
+        // Insert after the last high-priority message, or at the beginning
         // @ts-ignore: ts(2550)
-        const lastImportantMessage = this.#queue.findLastIndex(
-          (message) => message.priority === "important"
+        const lastHighPriorityMessage = this.#queue.findLastIndex(
+          (message) => message.priority === "high"
         );
-        this.#queue.splice(lastImportantMessage + 1, 0, message);
+        this.#queue.splice(lastHighPriorityMessage + 1, 0, message);
       } else {
         // Insert at the end
         this.#queue.push(message);
@@ -205,13 +169,12 @@ if (!("ariaNotify" in Element.prototype)) {
   /**
    * @param {string} message
    * @param {object} options
-   * @param {"important" | "none"} [options.priority]
-   * @param {"all" | "pending" | "none" } [options.interrupt]
+   * @param {"high" | "normal"} [options.priority]
    */
   Element.prototype["ariaNotify"] = function (
     message,
-    { priority = "none", interrupt = "none" } = {}
+    { priority = "normal" } = {}
   ) {
-    queue.enqueue(new Message({ element: this, message, priority, interrupt }));
+    queue.enqueue(new Message({ element: this, message, priority }));
   };
 }
