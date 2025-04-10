@@ -73,7 +73,7 @@ if (!("ariaNotify" in Element.prototype)) {
 
       // Get root element
       let root = /** @type {Element} */ (
-        this.element.closest("dialog") || this.element.getRootNode()
+        this.element.closest("dialog") || this.element.closest("[role='dialog']") || this.element.getRootNode()
       );
       if (!root || root instanceof Document) root = document.body;
 
