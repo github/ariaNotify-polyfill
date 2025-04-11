@@ -10,16 +10,21 @@
   "license": "MIT",
   "author": "GitHub Inc.",
   "main": "ariaNotify-polyfill.js",
+  "module": "ariaNotify-polyfill.js",
+  "type": "module",
   "directories": {
     "example": "examples"
   },
   "files": [],
   "scripts": {
-    "test": "npx playwright test"
+    "test": "web-test-runner",
+    "test:guidepup": "npx playwright test"
   },
   "devDependencies": {
+    "@esm-bundle/chai": "^4.3.4-fix.0",
     "@guidepup/guidepup": "^0.24.0",
     "@guidepup/playwright": "^0.14.1",
-    "@playwright/test": "^1.48.0"
+    "@playwright/test": "^1.48.0",
+    "@web/test-runner": "^0.20.1"
   }
 }

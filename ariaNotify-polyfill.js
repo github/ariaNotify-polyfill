@@ -5,7 +5,7 @@ if (!("ariaNotify" in Element.prototype)) {
   let uniqueId = `${Date.now()}`;
   try {
     uniqueId = crypto.randomUUID();
-  } catch {}
+  } catch { }
 
   /**
    * A unique symbol to prevent unauthorized access to the 'live-region' element.
