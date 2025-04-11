@@ -9,7 +9,12 @@ permissions:
   id-token: write
 
 jobs:
+  test:
+    name: Test
+    uses: github/ariaNotify-polyfill/.github/workflows/test.yml@main
+    secrets: inherit
   publish-npm:
+    needs: [test]
     name: Publish to npm
     runs-on: ubuntu-latest
     steps:
@@ -20,7 +25,6 @@ jobs:
           registry-url: https://registry.npmjs.org/
           cache: npm
       - run: npm ci --legacy-peer-deps
-      - run: npm test
       - run: npm version ${TAG_NAME} --git-tag-version=false
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
