@@ -7,6 +7,10 @@ import path from "node:path";
 // Pre-requisites:
 // - Run `defaults write com.apple.VoiceOver4/default SCREnableAppleScript 1`
 
+const voiceOverOptions = {
+  pollTimeout: 30_000,
+};
+
 const test = baseTest.extend({
   context: async ({ context }, run) => {
     await context.addInitScript({
@@ -30,9 +34,12 @@ const test = baseTest.extend({
 });
 
 if (process.platform === "darwin") {
+  let isVoiceOverStarted = false;
+
   test.beforeAll(async () => {
     // Start VoiceOver
-    await voiceOver.start();
+    await voiceOver.start(voiceOverOptions);
+    isVoiceOverStarted = true;
   });
 
   test.beforeEach(async ({ page }) => {
@@ -57,8 +64,14 @@ if (process.platform === "darwin") {
   });
 
   test.afterAll(async () => {
-    // Stop VoiceOver
-    await voiceOver.stop();
+    // Stop VoiceOver; suppressing errors
+    if (!isVoiceOverStarted) {
+      return;
+    }
+
+    try {
+      await voiceOver.stop(voiceOverOptions);
+    } catch {}
   });
 
   test("SuggestedText", async ({ page }) => {
