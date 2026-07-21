@@ -12,8 +12,8 @@ jobs:
     name: Web Test Runner
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.0
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
@@ -25,27 +25,27 @@ jobs:
     name: Guidepup (macOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v7.0.0
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
           cache: npm
       - run: npm install -g npm@^11.0.0
       - run: npm ci
-      - uses: guidepup/setup-action@5ab89fbb6641406f6f6c91057225f3fb397c2eea
+      - uses: guidepup/setup-action@5d19b1151e972898cae0f0cc44e239127953bd90
       - run: npm run test:guidepup
   guidepup-windows:
     name: Guidepup (Windows)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v7.0.0
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
           cache: npm
       - run: npm install -g npm@^11.0.0
       - run: npm ci
-      - uses: guidepup/setup-action@5ab89fbb6641406f6f6c91057225f3fb397c2eea
+      - uses: guidepup/setup-action@5d19b1151e972898cae0f0cc44e239127953bd90
       - run: npm run test:guidepup
