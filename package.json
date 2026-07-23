@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@esm-bundle/chai": "^4.3.4-fix.0",
-    "@guidepup/guidepup": "^0.25.0",
+    "@guidepup/guidepup": "^0.29.2",
     "@guidepup/playwright": "^0.16.0",
     "@playwright/test": "^1.48.0",
     "@web/test-runner": "^0.20.1"
