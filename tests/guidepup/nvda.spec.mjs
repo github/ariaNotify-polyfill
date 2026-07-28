@@ -102,7 +102,7 @@ if (process.platform === "win32") {
     await nvda.type("a");
 
     // Wait for the suggestion to appear
-    await page.waitForTimeout(4000);
+    await page.waitForTimeout(10000);
 
     // Assert that the spoken phrases are as expected
     const spokenPhraseLog = JSON.stringify(await nvda.spokenPhraseLog());

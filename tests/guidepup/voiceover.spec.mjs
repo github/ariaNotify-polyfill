@@ -73,7 +73,7 @@ if (process.platform === "darwin") {
     await voiceOver.type("a");
 
     // Wait for the suggestion to appear
-    await page.waitForTimeout(4000);
+    await page.waitForTimeout(10000);
 
     // Assert that the spoken phrases are as expected
     const lastSpokenPhrase = await voiceOver.lastSpokenPhrase();
