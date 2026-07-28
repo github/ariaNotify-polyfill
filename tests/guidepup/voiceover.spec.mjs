@@ -77,6 +77,7 @@ if (process.platform === "darwin") {
 
     // Assert that the spoken phrases are as expected
     const lastSpokenPhrase = await voiceOver.lastSpokenPhrase();
+    console.log("VoiceOver lastSpokenPhrase:", lastSpokenPhrase);
     expect(lastSpokenPhrase.startsWith("a")).toBe(true);
     // expect(lastSpokenPhrase.includes("Suggestion: acceptable")).toBe(true); // FIXME: Commenting because this fails, though it _should_ pass.
     expect(

@@ -106,6 +106,7 @@ if (process.platform === "win32") {
 
     // Assert that the spoken phrases are as expected
     const spokenPhraseLog = JSON.stringify(await nvda.spokenPhraseLog());
+    console.log("NVDA spokenPhraseLog:", spokenPhraseLog);
     expect(spokenPhraseLog.includes("Suggestion: acceptable")).toBe(true);
     // expect(spokenPhraseLog.includes("Press right arrow to commit suggestion")).toBe(true); // FIXME: Commenting because this fails, though it _should_ pass.
   });
