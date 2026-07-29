@@ -209,6 +209,36 @@ if (
   );
 
   /**
+   * Eagerly inserts the polite and assertive live regions into the document body
+   * so that assistive technologies (e.g. VoiceOver, NVDA) register them in the
+   * accessibility tree before any message is announced. Screen readers routinely
+   * fail to announce updates to a live region that is created and populated at
+   * nearly the same time, so the regions must already exist when their text
+   * content changes. `announce()` reuses these pre-created regions when the
+   * message targets the document body.
+   * @returns {void}
+   */
+  function ensureBodyLiveRegions() {
+    if (!document.body) return;
+    for (const name of [
+      politeLiveRegionCustomElementName,
+      assertiveLiveRegionCustomElementName,
+    ]) {
+      if (!document.body.querySelector(name)) {
+        document.body.append(document.createElement(name));
+      }
+    }
+  }
+
+  if (document.body) {
+    ensureBodyLiveRegions();
+  } else {
+    document.addEventListener("DOMContentLoaded", ensureBodyLiveRegions, {
+      once: true,
+    });
+  }
+
+  /**
    * Installs an `ariaNotify` implementation, taking precedence over a native
    * implementation when present. Falls back to assignment if
    * `Object.defineProperty` throws (e.g. when a native `ariaNotify` property is
