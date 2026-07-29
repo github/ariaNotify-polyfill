@@ -207,6 +207,28 @@ if (
   );
 
   /**
+   * Installs an `ariaNotify` implementation, taking precedence over a native
+   * implementation when present. Falls back to assignment if
+   * `Object.defineProperty` throws (e.g. when a native `ariaNotify` property is
+   * not configurable), ensuring the polyfill is used instead of the browser's
+   * native `ariaNotify`.
+   * @param {typeof Element.prototype | typeof Document.prototype} prototype
+   * @param {(message: string, options?: { priority?: "high" | "normal" }) => void} value
+   */
+  const installAriaNotify = (prototype, value) => {
+    try {
+      Object.defineProperty(prototype, "ariaNotify", {
+        configurable: true,
+        writable: true,
+        value,
+      });
+    } catch {
+      // @ts-ignore - assignment is a fallback when the property cannot be redefined.
+      prototype.ariaNotify = value;
+    }
+  };
+
+  /**
    * @param {string} message
    * @param {object} options
    * @param {"high" | "normal"} [options.priority]
@@ -219,11 +241,7 @@ if (
   };
 
   if (shouldBypassNativeAriaNotify || !("ariaNotify" in Element.prototype)) {
-    Object.defineProperty(Element.prototype, "ariaNotify", {
-      configurable: true,
-      writable: true,
-      value: elementAriaNotify,
-    });
+    installAriaNotify(Element.prototype, elementAriaNotify);
   }
 
   /**
@@ -239,10 +257,6 @@ if (
   };
 
   if (shouldBypassNativeAriaNotify || !("ariaNotify" in Document.prototype)) {
-    Object.defineProperty(Document.prototype, "ariaNotify", {
-      configurable: true,
-      writable: true,
-      value: documentAriaNotify,
-    });
+    installAriaNotify(Document.prototype, documentAriaNotify);
   }
 }
