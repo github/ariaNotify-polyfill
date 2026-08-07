@@ -38,8 +38,6 @@ jobs:
   guidepup-windows:
     name: Guidepup (Windows)
     runs-on: windows-latest
-    env:
-      NVDA_INSTALL_DIR: C:\nvda
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7
@@ -49,16 +47,24 @@ jobs:
           cache: npm
       - run: npm install -g npm@^11.0.0
       - run: npm ci
-      # - from copilot:
-      #  changed Windows CI to enforce setup instead: 
-      #  guidepup/setup-action now installs NVDA into a deterministic path (C:\nvda) 
-      #  and the workflow explicitly verifies nvda.exe exists before running npm run test:guidepup
       - uses: guidepup/setup-action@5d19b1151e972898cae0f0cc44e239127953bd90
-        with:
-          nvdaInstallDir: ${{ env.NVDA_INSTALL_DIR }}
-      - run: |
-          $nvdaExecutablePath = Join-Path $env:NVDA_INSTALL_DIR "nvda.exe"
-          if (-not (Test-Path $nvdaExecutablePath)) {
-            throw "NVDA executable not found at $nvdaExecutablePath"
+      # guidepup records the directory it installed NVDA into in the registry,
+      # and that is where @guidepup/guidepup looks for it when running the
+      # tests, so assert NVDA is there before running them.
+      - name: Verify NVDA is installed
+        run: |
+          $registryKey = "HKCU:\Software\Guidepup\Nvda"
+          if (-not (Test-Path $registryKey)) {
+            throw "NVDA is not installed: registry key $registryKey is missing"
           }
+          $nvdaRegistryKey = Get-Item -Path $registryKey
+          $nvdaExecutablePath = $nvdaRegistryKey.GetValueNames() |
+            Where-Object { $_ -like "guidepup_nvda_*" } |
+            ForEach-Object { Join-Path $nvdaRegistryKey.GetValue($_) "nvda.exe" } |
+            Where-Object { Test-Path $_ } |
+            Select-Object -First 1
+          if (-not $nvdaExecutablePath) {
+            throw "NVDA is not installed: no nvda.exe found in any directory registered under $registryKey"
+          }
+          Write-Host "Found NVDA at $nvdaExecutablePath"
       - run: npm run test:guidepup
