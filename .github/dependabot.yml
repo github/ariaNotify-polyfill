@@ -25,6 +25,11 @@ updates:
       github-actions:
         patterns:
           - "*"
+    ignore:
+      # Newer releases of guidepup/setup-action are not compatible with the
+      # version of @guidepup/guidepup this repository uses, so this action is
+      # pinned and has to be updated manually alongside @guidepup/guidepup.
+      - dependency-name: "guidepup/setup-action"
     schedule:
       interval: "weekly"
     cooldown:
