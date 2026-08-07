@@ -68,6 +68,7 @@ if (process.platform === "win32") {
       if (error instanceof Error && error.message.includes("NVDA not installed")) {
         nvdaUnavailable = true;
         test.skip(true, "NVDA not installed in test environment");
+        return;
       }
       throw error;
     }
