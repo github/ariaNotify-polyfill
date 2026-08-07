@@ -34,16 +34,12 @@ jobs:
       - run: npm install -g npm@^11.0.0
       - run: npm ci
       - uses: guidepup/setup-action@5d19b1151e972898cae0f0cc44e239127953bd90
-        with:
-          nvdaInstallDir: C:\nvda
-      - run: |
-          if (-not (Test-Path "C:\nvda\nvda.exe")) {
-            throw "NVDA executable not found at C:\\nvda\\nvda.exe"
-          }
       - run: npm run test:guidepup
   guidepup-windows:
     name: Guidepup (Windows)
     runs-on: windows-latest
+    env:
+      NVDA_INSTALL_DIR: C:\nvda
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7
@@ -54,4 +50,11 @@ jobs:
       - run: npm install -g npm@^11.0.0
       - run: npm ci
       - uses: guidepup/setup-action@5d19b1151e972898cae0f0cc44e239127953bd90
+        with:
+          nvdaInstallDir: ${{ env.NVDA_INSTALL_DIR }}
+      - run: |
+          $nvdaExecutablePath = Join-Path $env:NVDA_INSTALL_DIR "nvda.exe"
+          if (-not (Test-Path $nvdaExecutablePath)) {
+            throw "NVDA executable not found at $nvdaExecutablePath"
+          }
       - run: npm run test:guidepup
