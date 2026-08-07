@@ -49,6 +49,10 @@ jobs:
           cache: npm
       - run: npm install -g npm@^11.0.0
       - run: npm ci
+      # - from copilot:
+      #  changed Windows CI to enforce setup instead: 
+      #  guidepup/setup-action now installs NVDA into a deterministic path (C:\nvda) 
+      #  and the workflow explicitly verifies nvda.exe exists before running npm run test:guidepup
       - uses: guidepup/setup-action@5d19b1151e972898cae0f0cc44e239127953bd90
         with:
           nvdaInstallDir: ${{ env.NVDA_INSTALL_DIR }}
