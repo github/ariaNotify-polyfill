@@ -46,7 +46,13 @@ const test = baseTest.extend({
 });
 
 if (process.platform === "win32") {
+  let nvdaUnavailable = false;
+
   test.beforeEach(async ({ page }) => {
+    if (nvdaUnavailable) {
+      test.skip(true, "NVDA not installed in test environment");
+    }
+
     // Navigate to suggested test example page
     await page.goto(
       "http://localhost:3333/examples/suggested-text/index.html",
@@ -56,7 +62,15 @@ if (process.platform === "win32") {
     );
 
     // Start NVDA
-    await nvda.start();
+    try {
+      await nvda.start();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("NVDA not installed")) {
+        nvdaUnavailable = true;
+        test.skip(true, "NVDA not installed in test environment");
+      }
+      throw error;
+    }
 
     // Adapted from https://github.com/guidepup/guidepup-playwright/blob/34c3973dd98e19c81f468352e13bac5b8434b28f/src/nvdaTest.ts#L137-L167:
 
