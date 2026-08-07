@@ -26,5 +26,8 @@
     "@guidepup/playwright": "^0.16.0",
     "@playwright/test": "^1.48.0",
     "@web/test-runner": "^0.20.1"
+  },
+  "overrides": {
+    "ip-address": "^10.3.1"
   }
 }
