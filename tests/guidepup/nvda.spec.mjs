@@ -56,7 +56,7 @@ if (process.platform === "win32") {
     );
 
     // Start NVDA
-    await nvda.start();
+    await nvda.start({ capture: true });
 
     // Adapted from https://github.com/guidepup/guidepup-playwright/blob/34c3973dd98e19c81f468352e13bac5b8434b28f/src/nvdaTest.ts#L137-L167:
 

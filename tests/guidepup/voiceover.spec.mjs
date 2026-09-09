@@ -32,7 +32,7 @@ const test = baseTest.extend({
 if (process.platform === "darwin") {
   test.beforeAll(async () => {
     // Start VoiceOver
-    await voiceOver.start();
+    await voiceOver.start({ capture: true });
   });
 
   test.beforeEach(async ({ page }) => {
