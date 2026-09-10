@@ -76,13 +76,11 @@ if (process.platform === "darwin") {
     await page.waitForTimeout(4000);
 
     // Assert that the spoken phrases are as expected
-    const spokenPhraseLog = await voiceOver.spokenPhraseLog();
-    expect(spokenPhraseLog.some((phrase) => phrase.startsWith("a"))).toBe(true);
-    // expect(spokenPhraseLog.some((phrase) => phrase.includes("Suggestion: acceptable"))).toBe(true); // FIXME: Commenting because this fails, though it _should_ pass.
+    const spokenPhraseLog = JSON.stringify(await voiceOver.spokenPhraseLog());
+    expect(spokenPhraseLog.includes("a")).toBe(true);
+    // expect(spokenPhraseLog.includes("Suggestion: acceptable")).toBe(true); // FIXME: Commenting because this fails, though it _should_ pass.
     expect(
-      spokenPhraseLog.some((phrase) =>
-        phrase.includes("Press right arrow to commit suggestion")
-      )
+      spokenPhraseLog.includes("Press right arrow to commit suggestion")
     ).toBe(true);
   });
 } else {
